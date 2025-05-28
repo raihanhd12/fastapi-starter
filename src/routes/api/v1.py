@@ -1,60 +1,87 @@
-# from typing import Optional
+from fastapi import APIRouter, Depends, Header, Request
+from fastapi.security import OAuth2PasswordBearer
+from typing import Optional
 
-# from fastapi import APIRouter, Depends, Query, Request
+from src.app.controllers.auth_controller import AuthController
+from src.app.schemas.user_schema import (
+    UserCreate,
+    LoginRequest,
+    ChangePassword,
+    PasswordReset,
+    PasswordResetConfirm,
+)
 
-# from src.app.controllers.llm_controller import LLMController
-# from src.app.models.llm_model import FeedbackRequest, QueryRequest, QueryResponse
-# from src.config.security import validate_api_key
+# OAuth2 scheme for swagger UI
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/login", auto_error=False)
 
-# # Define router for all endpoints
-# router = APIRouter(prefix="/api/v1", dependencies=[Depends(validate_api_key)])
-
-
-# @router.post("/chat/query", response_model=QueryResponse, tags=["chat"])
-# async def process_query(query_request: QueryRequest, request: Request):
-#     """Process a query and generate a response"""
-#     stream = getattr(query_request, "stream", False)
-
-#     if stream:
-#         return await LLMController.process_streaming_query(query_request)
-#     else:
-#         # Process the query and get the response
-#         response = await LLMController.process_query(query_request)
-#         # Return the response object directly - FastAPI will handle serialization
-#         return response
+# Define router
+router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
-# @router.get("/conversations", tags=["chat"])
-# async def get_conversations(user_id: Optional[str] = Query(None)):
-#     """Get all conversations"""
-#     return LLMController.get_conversations(user_id)
+@router.post("/register", response_model=dict)
+async def register(user_data: UserCreate, request: Request):
+    """Register new user"""
+    return AuthController.register(user_data, request)
 
 
-# @router.get("/conversations/{conversation_id}", tags=["chat"])
-# async def get_conversation_details(conversation_id: int):
-#     """Get conversation details (messages) by conversation ID"""
-#     return LLMController.get_conversation_details(conversation_id)
+@router.post("/login", response_model=dict)
+async def login(login_data: LoginRequest, request: Request):
+    """Login user with username/email and password"""
+    return AuthController.login(login_data, request)
 
 
-# @router.delete("/conversations", tags=["chat"])
-# async def delete_all_conversations(user_id: Optional[str] = Query(None)):
-#     """Delete all conversations, optionally filtered by user_id"""
-#     return LLMController.delete_all_conversations(user_id)
+@router.post("/refresh", response_model=dict)
+async def refresh_token(
+    request: Request,
+    refresh_token: str = Header(..., description="Refresh token in header"),
+):
+    """Refresh access token using refresh token"""
+    return AuthController.refresh_token(refresh_token, request)
 
 
-# @router.delete("/conversations/{conversation_id}", tags=["chat"])
-# async def delete_conversation(conversation_id: int):
-#     """Delete a specific conversation by ID"""
-#     return LLMController.delete_conversation(conversation_id)
+@router.post("/validate", response_model=dict)
+async def validate_token(request: Request, token: str = Depends(oauth2_scheme)):
+    """Validate access token"""
+    return AuthController.validate_token(token, request)
 
 
-# @router.post("/feedback", tags=["feedback"])
-# def submit_feedback(feedback_request: FeedbackRequest):
-#     """Submit feedback"""
-#     return LLMController.submit_feedback(feedback_request)
+@router.get("/me", response_model=dict)
+async def get_current_user(request: Request, token: str = Depends(oauth2_scheme)):
+    """Get current user information from token"""
+    return AuthController.get_current_user(token, request)
 
 
-# @router.get("/feedbacks", tags=["feedback"])
-# def get_feedbacks(filter: Optional[str] = Query(None)):
-#     """Retrieve all feedbacks, optionally filtered by thumbs_up or thumbs_down"""
-#     return LLMController.get_feedbacks(filter)
+@router.post("/change-password", response_model=dict)
+async def change_password(
+    password_data: ChangePassword, request: Request, token: str = Depends(oauth2_scheme)
+):
+    """Change user password"""
+    # Extract user ID from token first
+    user_info = AuthController.get_current_user(token, request)
+    user_id = user_info["data"]["id"]
+
+    return AuthController.change_password(user_id, password_data, request)
+
+
+@router.post("/forgot-password", response_model=dict)
+async def request_password_reset(reset_data: PasswordReset, request: Request):
+    """Request password reset"""
+    return AuthController.request_password_reset(reset_data, request)
+
+
+@router.post("/reset-password", response_model=dict)
+async def reset_password(reset_data: PasswordResetConfirm, request: Request):
+    """Reset password using reset token"""
+    return AuthController.reset_password(reset_data, request)
+
+
+@router.post("/logout", response_model=dict)
+async def logout(request: Request, token: str = Depends(oauth2_scheme)):
+    """Logout user"""
+    return AuthController.logout(token, request)
+
+
+@router.get("/token-info", response_model=dict)
+async def get_token_info(request: Request, token: str = Depends(oauth2_scheme)):
+    """Get token information"""
+    return AuthController.get_token_info(token, request)
