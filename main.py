@@ -1,17 +1,35 @@
-import uvicorn
 import logging
+from contextlib import asynccontextmanager
+
+import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 import src.config.env as env
 from src.routes.api.v1 import router as api_router
-from src.routes.api.auth import router as auth_router
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Handle startup and shutdown events
+    """
+    # Startup
+    logger.info("🚀 FastAPI Starter Template is starting up...")
+    logger.info("📝 Documentation available at: http://0.0.0.0:8001/docs")
+    logger.info("🔗 API Base URL: http://0.0.0.0:8001/api/v1")
+
+    yield  # Server is running
+
+    # Shutdown
+    logger.info("⚡️ FastAPI Starter Template is shutting down...")
+
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -34,7 +52,6 @@ app.add_middleware(
 
 # Include routers
 app.include_router(api_router)
-app.include_router(auth_router, prefix="/api/v1")
 
 
 @app.get("/")
@@ -58,22 +75,6 @@ async def root():
 async def health_check():
     """Basic health check endpoint"""
     return {"status": "healthy", "service": "FastAPI Starter", "version": "1.0.0"}
-
-
-# Startup event
-@app.on_event("startup")
-async def startup_event():
-    logger.info("🚀 FastAPI Starter Template is starting up...")
-    logger.info(
-        f"📝 Documentation available at: http://{env.API_HOST}:{env.API_PORT}/docs"
-    )
-    logger.info(f"🔗 API Base URL: http://{env.API_HOST}:{env.API_PORT}/api/v1")
-
-
-# Shutdown event
-@app.on_event("shutdown")
-async def shutdown_event():
-    logger.info("🛑 FastAPI Starter Template is shutting down...")
 
 
 if __name__ == "__main__":

@@ -6,3 +6,8 @@ pydantic
 pydantic-settings
 python-dotenv
 sqlalchemy
+passlib[bcrypt]
+python-jose[cryptography]
+python-multipart
+psycopg2-binary
+pydantic[email]

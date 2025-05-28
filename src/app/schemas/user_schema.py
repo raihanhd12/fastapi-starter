@@ -1,13 +1,19 @@
-from pydantic import BaseModel, EmailStr, Field, validator
-from typing import Optional
 from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel, EmailStr, Field, validator
 
 
 class UserBase(BaseModel):
     """Base user schema dengan common attributes"""
 
     email: EmailStr
-    username: str = Field(..., min_length=3, max_length=100, regex="^[a-zA-Z0-9_-]+$")
+    username: str = Field(
+        ...,
+        min_length=3,
+        max_length=100,
+        pattern="^[a-zA-Z0-9_-]+$",  # Changed from regex to pattern
+    )
     full_name: Optional[str] = Field(None, max_length=200)
     bio: Optional[str] = Field(None, max_length=1000)
     avatar_url: Optional[str] = Field(None, max_length=500)
@@ -34,7 +40,10 @@ class UserUpdate(BaseModel):
 
     email: Optional[EmailStr] = None
     username: Optional[str] = Field(
-        None, min_length=3, max_length=100, regex="^[a-zA-Z0-9_-]+$"
+        None,
+        min_length=3,
+        max_length=100,
+        pattern="^[a-zA-Z0-9_-]+$",  # Changed from regex to pattern
     )
     full_name: Optional[str] = Field(None, max_length=200)
     bio: Optional[str] = Field(None, max_length=1000)
